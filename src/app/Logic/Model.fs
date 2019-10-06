@@ -6,21 +6,25 @@ open System
 type Command =
     | RequestTimeOff of TimeOffRequest
     | ValidateRequest of UserId * Guid
+    | DenyRequest of UserId * Guid
     with
     member this.UserId =
         match this with
         | RequestTimeOff request -> request.UserId
         | ValidateRequest (userId, _) -> userId
+        | DenyRequest (userId, _) -> userId
 
 // And our events
 type RequestEvent =
     | RequestCreated of TimeOffRequest
     | RequestValidated of TimeOffRequest
+    | RequestDenied of TimeOffRequest
     with
     member this.Request =
         match this with
         | RequestCreated request -> request
         | RequestValidated request -> request
+        | RequestDenied request -> request
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -29,17 +33,20 @@ module Logic =
     type RequestState =
         | NotCreated
         | PendingValidation of TimeOffRequest
-        | Validated of TimeOffRequest with
+        | Validated of TimeOffRequest 
+        | Canceled of TimeOffRequest with
         member this.Request =
             match this with
             | NotCreated -> invalidOp "Not created"
             | PendingValidation request
             | Validated request -> request
+            | Canceled request -> request
         member this.IsActive =
             match this with
             | NotCreated -> false
             | PendingValidation _
             | Validated _ -> true
+            | Canceled _ -> false
 
     type UserRequestsState = Map<Guid, RequestState>
 
@@ -47,6 +54,7 @@ module Logic =
         match event with
         | RequestCreated request -> PendingValidation request
         | RequestValidated request -> Validated request
+        | RequestDenied request -> Canceled request
 
     let evolveUserRequests (userRequests: UserRequestsState) (event: RequestEvent) =
         let requestState = defaultArg (Map.tryFind event.Request.RequestId userRequests) NotCreated
@@ -58,7 +66,7 @@ module Logic =
 
     let overlapsWithAnyRequest (otherRequests: TimeOffRequest seq) request =
         otherRequests
-        |> List.exists(fun other -> request |> overlapsWith other)
+        |> Seq.exists(fun other -> request |> overlapsWith other)
 
     let createRequest activeUserRequests  request =
         if request |> overlapsWithAnyRequest activeUserRequests then
@@ -75,6 +83,13 @@ module Logic =
             Ok [RequestValidated request]
         | _ ->
             Error "Request cannot be validated"
+
+    let denyRequest requestState =
+        match requestState with
+        | PendingValidation request ->
+            Ok [RequestDenied request]
+        | _ ->
+            Error "Request cannot be canceled"
 
     let decide (userRequests: UserRequestsState) (user: User) (command: Command) =
         let relatedUserId = command.UserId
@@ -99,3 +114,9 @@ module Logic =
                 else
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     validateRequest requestState
+            | DenyRequest (_, requestId) ->
+                if user <> Manager then
+                    Error "Unauthorized"
+                else
+                    let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
+                    denyRequest requestState

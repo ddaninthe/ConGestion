@@ -84,4 +84,17 @@ let validationTests =
       |> When (ValidateRequest ("jdoe", request.RequestId))
       |> Then (Ok [RequestValidated request]) "The request should have been validated"
     }
+
+    test "A request is canceled" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs Manager
+      |> When (DenyRequest ("jdoe", request.RequestId))
+      |> Then (Ok [RequestDenied request]) "The request should have been canceled"
+    }
   ]
