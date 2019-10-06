@@ -54,11 +54,28 @@ module Logic =
         userRequests.Add (event.Request.RequestId, newRequestState)
 
     let overlapsWith request1 request2 =
-        request1 = request2
+        let compare boundary boundary2 =
+            let value = DateTime.Compare(boundary.Date, boundary2.Date)
+            match value with
+            | 0 -> 
+                if boundary.HalfDay = AM && boundary2.HalfDay = PM then
+                    -1
+                elif boundary.HalfDay = PM && boundary2.HalfDay = AM then
+                    1
+                else
+                    0
+            | _ -> value
+        
+        if request1.Start < request2.Start then
+            request1.End >= request2.Start
+        elif request1.Start > request2.Start then
+            request1.Start <= request2.End
+        else
+            request1.Start = request2.Start || request1.End = request2.End
 
     let overlapsWithAnyRequest (otherRequests: TimeOffRequest seq) request =
         otherRequests
-        |> List.exists(fun other -> request |> overlapsWith other)
+        |> Seq.exists(fun other -> other |> overlapsWith request)
 
     let createRequest activeUserRequests  request =
         if request |> overlapsWithAnyRequest activeUserRequests then
