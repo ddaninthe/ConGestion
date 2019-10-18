@@ -85,7 +85,7 @@ let validationTests =
       |> Then (Ok [RequestValidated request]) "The request should have been validated"
     }
 
-    test "A request is canceled" {
+    test "A request is canceled by a manager" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
@@ -96,5 +96,41 @@ let validationTests =
       |> ConnectedAs Manager
       |> When (DenyRequest ("jdoe", request.RequestId))
       |> Then (Ok [RequestDenied request]) "The request should have been canceled"
+    }
+
+    test "A request is canceled by is own user" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      let user = Employee request.UserId
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs user
+      |> When (DenyRequest ("jdoe", request.RequestId))
+      |> Then (Ok [RequestDenied request]) "The request should have been canceled"
+    }
+
+    test "A request is canceled by another user" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      let request2 = {
+        UserId = "janedoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }      
+
+      let user = Employee request2.UserId
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs user
+      |> When (DenyRequest ("jdoe", request.RequestId))
+      |> Then (Error "Unauthorized : Employee should be the same") "Unauthorized : Employee should be the same"
     }
   ]

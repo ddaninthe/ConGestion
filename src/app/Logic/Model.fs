@@ -112,7 +112,7 @@ module Logic =
         let relatedUserId = command.UserId
         match user with
         | Employee userId when userId <> relatedUserId ->
-            Error "Unauthorized"
+            Error "Unauthorized : Employee should be the same"
         | _ ->
             match command with
             | RequestTimeOff request ->
@@ -127,13 +127,10 @@ module Logic =
 
             | ValidateRequest (_, requestId) ->
                 if user <> Manager then
-                    Error "Unauthorized"
+                    Error "Unauthorized3"
                 else
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     validateRequest requestState
             | DenyRequest (_, requestId) ->
-                if user <> Manager then
-                    Error "Unauthorized"
-                else
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     denyRequest requestState
