@@ -85,11 +85,10 @@ module Logic =
         otherRequests
         |> Seq.exists(fun other -> request |> overlapsWith other)
 
-    let createRequest activeUserRequests  request =
+    let createRequest activeUserRequests request date =
         if request |> overlapsWithAnyRequest activeUserRequests then
             Error "Overlapping request"
-        // This DateTime.Today must go away!
-        elif request.Start.Date <= DateTime.Today then
+        elif request.Start.Date <= date then
             Error "The request starts in the past"
         else
             Ok [RequestCreated request]
@@ -123,11 +122,11 @@ module Logic =
                     |> Seq.where (fun state -> state.IsActive)
                     |> Seq.map (fun state -> state.Request)
 
-                createRequest activeUserRequests request
+                createRequest activeUserRequests request DateTime.Today
 
             | ValidateRequest (_, requestId) ->
                 if user <> Manager then
-                    Error "Unauthorized3"
+                    Error "Unauthorized"
                 else
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     validateRequest requestState

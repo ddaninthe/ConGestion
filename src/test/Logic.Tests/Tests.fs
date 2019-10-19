@@ -67,6 +67,20 @@ let creationTests =
       |> When (RequestTimeOff request)
       |> Then (Ok [RequestCreated request]) "The request should have been created"
     }
+
+    test "A Request in the past cannot be created" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2010, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2010, 12, 27); HalfDay = PM }
+      }
+
+      Given [ ]
+      |> ConnectedAs (Employee "jdoe")
+      |> When (RequestTimeOff request)
+      |> Then (Error "The request starts in the past") "The request should not have been created"
+    }
   ]
 
 [<Tests>]
@@ -118,15 +132,9 @@ let validationTests =
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
         Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
-        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }  
 
-      let request2 = {
-        UserId = "janedoe"
-        RequestId = Guid.NewGuid()
-        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
-        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }      
-
-      let user = Employee request2.UserId
+      let user = Employee "janedoe"
 
       Given [ RequestCreated request ]
       |> ConnectedAs user
