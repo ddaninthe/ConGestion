@@ -131,5 +131,8 @@ module Logic =
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     validateRequest requestState
             | DenyRequest (_, requestId) ->
+                if user <> Manager then
+                    Error "Unauthorized"
+                else
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     denyRequest requestState
