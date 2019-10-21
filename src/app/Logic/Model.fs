@@ -75,17 +75,10 @@ module Logic =
             | _ -> value
 
         not (request1.Start > request2.End || request1.End < request2.Start)
-        
-        (*if request1.Start < request2.Start then
-            request1.End >= request2.Start
-        elif request1.Start > request2.Start then
-            request1.Start <= request2.End
-        else
-            request1.Start = request2.Start || request1.End = request2.End*)
 
     let overlapsWithAnyRequest (otherRequests: TimeOffRequest seq) request =
         otherRequests
-        |> Seq.exists(fun other -> request |> overlapsWith other)
+        |> Seq.exists (overlapsWith request)
 
     let createRequest activeUserRequests request date =
         if request |> overlapsWithAnyRequest activeUserRequests then
