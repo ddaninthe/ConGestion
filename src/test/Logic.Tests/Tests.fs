@@ -112,7 +112,7 @@ let validationTests =
       |> Then (Ok [RequestDenied request]) "The request should have been canceled"
     }
 
-    test "A request is canceled by another user" {
+    test "A request is denied by another user" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
@@ -124,6 +124,64 @@ let validationTests =
       Given [ RequestCreated request ]
       |> ConnectedAs user
       |> When (DenyRequest ("jdoe", request.RequestId))
-      |> Then (Error "Unauthorized : Employee should be the same") "Unauthorized : Employee should be the same"
+      |> Then (Error "Unauthorized : Employee should be the same") "Error should have been thrown"
     }
+  ]
+[<Tests>]
+let cancellationByEmployeeTests = 
+  testList "Cancellation by employee tests" [
+    test "A request starting in the future is cancelled by an employee" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } 
+      }  
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs (Employee "jdoe")
+      |> When (CancelRequestByEmployee ("jdoe", request))
+      |> Then (Ok [RequestCanceledByUser request]) "The request should have been canceled"
+    }
+
+    test "I try to cancel a request as Manager" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } 
+      }  
+
+        Given [ RequestCreated request ]
+        |> ConnectedAs Manager
+        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> Then (Error "Unauthorized") "Error should have been thrown"
+    }
+    test "I try to cancel a request in past" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(1992, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(1992, 12, 27); HalfDay = PM } 
+      }  
+
+        Given [ RequestCreated request ]
+        |> ConnectedAs (Employee "jdoe")
+        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> Then (Error "Error: Cannot cancel a request in past") "Error should have been thrown"
+    }  
+
+    test "I try to cancel a validated request" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } 
+      }  
+
+        Given [ RequestValidated request ]
+        |> ConnectedAs (Employee "jdoe")
+        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> Then (Ok [RequestCanceledByUser request]) "The request should have been canceled"
+    }  
   ]
