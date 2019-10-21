@@ -112,21 +112,6 @@ let validationTests =
       |> Then (Ok [RequestDenied request]) "The request should have been canceled"
     }
 
-    test "A request is canceled by is own user" {
-      let request = {
-        UserId = "jdoe"
-        RequestId = Guid.NewGuid()
-        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
-        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
-
-      let user = Employee request.UserId
-
-      Given [ RequestCreated request ]
-      |> ConnectedAs user
-      |> When (DenyRequest ("jdoe", request.RequestId))
-      |> Then (Ok [RequestDenied request]) "The request should have been canceled"
-    }
-
     test "A request is canceled by another user" {
       let request = {
         UserId = "jdoe"
