@@ -99,7 +99,33 @@ let validationTests =
       |> Then (Ok [RequestValidated request]) "The request should have been validated"
     }
 
-    test "A request is canceled by a manager" {
+    test "A request validated is canceled by a manager" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestValidated request ]
+      |> ConnectedAs Manager
+      |> When (CancelRequestByManager ("jdoe", request))
+      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
+    }
+
+    test "A request denied is canceled by a manager" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestDenied request ]
+      |> ConnectedAs Manager
+      |> When (CancelRequestByManager ("jdoe", request))
+      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
+    }
+
+    test "A request is refused by a manager" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
