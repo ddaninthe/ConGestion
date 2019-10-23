@@ -170,6 +170,8 @@ module Logic =
                 else 
                     if request.End.Date < DateTime.Now then
                         Error "Error: Cannot cancel a request in past"
+                    else if request.Start.Date.Day = DateTime.Now.Day then
+                        Error "Error: Cannot cancel request where the start date is equal to today"                    
                     else 
                         let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
                         cancelRequest requestState   

@@ -86,7 +86,7 @@ let creationTests =
 [<Tests>]
 let validationTests =
   testList "Validation tests" [
-    test "A request is validated" {
+    test "A request is validated by a manager" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
@@ -97,32 +97,6 @@ let validationTests =
       |> ConnectedAs Manager
       |> When (ValidateRequest ("jdoe", request.RequestId))
       |> Then (Ok [RequestValidated request]) "The request should have been validated"
-    }
-
-    test "A request validated is canceled by a manager" {
-      let request = {
-        UserId = "jdoe"
-        RequestId = Guid.NewGuid()
-        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
-        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
-
-      Given [ RequestValidated request ]
-      |> ConnectedAs Manager
-      |> When (CancelRequestByManager ("jdoe", request))
-      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
-    }
-
-    test "A request denied is canceled by a manager" {
-      let request = {
-        UserId = "jdoe"
-        RequestId = Guid.NewGuid()
-        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
-        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
-
-      Given [ RequestDenied request ]
-      |> ConnectedAs Manager
-      |> When (CancelRequestByManager ("jdoe", request))
-      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
     }
 
     test "A request is refused by a manager" {
@@ -138,7 +112,7 @@ let validationTests =
       |> Then (Ok [RequestDenied request]) "The request should have been canceled"
     }
 
-    test "A request is denied by another user" {
+    test "A request cannot be denied by another user" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
@@ -209,5 +183,49 @@ let cancellationByEmployeeTests =
         |> ConnectedAs (Employee "jdoe")
         |> When (CancelRequestByEmployee ("jdoe", request))
         |> Then (Ok [RequestCanceledByUser request]) "The request should have been canceled"
+    }
+
+    test "I try to cancel a validated request where the start date is equal to today" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime.Now; HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } 
+      }  
+
+        Given [ RequestValidated request ]
+        |> ConnectedAs (Employee "jdoe")
+        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> Then (Error "Error: Cannot cancel request where the start date is equal to today") "Error should have been thrown"
     }  
+  ]
+
+[<Tests>]
+let cancellationByManagerTests = 
+  testList "Cancellation by manager tests" [
+    test "A validated request is canceled by a manager" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestValidated request ]
+      |> ConnectedAs Manager
+      |> When (CancelRequestByManager ("jdoe", request))
+      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
+    }
+
+    test "A denied request is canceled by a manager" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestDenied request ]
+      |> ConnectedAs Manager
+      |> When (CancelRequestByManager ("jdoe", request))
+      |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
+    }
   ]
