@@ -8,6 +8,8 @@ type Command =
     | ValidateRequest of UserId * Guid
     | DenyRequest of UserId * Guid
     | WantCancelRequest of UserId * Guid  // Demande d'annulation
+    | CancelRequestByEmployee of UserId * TimeOffRequest // Requête utilisé pour qu'un employé annule sa requête
+    | CancelRequestByManager of UserId * TimeOffRequest // Requête utilisé pour qu'un manager annule une requête
     with
     member this.UserId =
         match this with
@@ -15,6 +17,8 @@ type Command =
         | ValidateRequest (userId, _) -> userId
         | DenyRequest (userId, _) -> userId
         | WantCancelRequest (userId, _) -> userId
+        | CancelRequestByEmployee (_, request) -> request.UserId
+        | CancelRequestByManager (_, request) -> request.UserId
 
 // And our events
 type RequestEvent =
@@ -22,6 +26,8 @@ type RequestEvent =
     | RequestValidated of TimeOffRequest
     | RequestDenied of TimeOffRequest
     | CancelWanted of TimeOffRequest
+    | RequestCanceledByUser of TimeOffRequest
+    | RequestCanceledByManager of TimeOffRequest
     with
     member this.Request =
         match this with
@@ -29,6 +35,8 @@ type RequestEvent =
         | RequestValidated request -> request
         | RequestDenied request -> request
         | CancelWanted request -> request
+        | RequestCanceledByUser request -> request
+        | RequestCanceledByManager request -> request
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -39,7 +47,9 @@ module Logic =
         | PendingValidation of TimeOffRequest
         | Validated of TimeOffRequest 
         | CanceledAsked of TimeOffRequest // Demande d'annulation
-        | Canceled of TimeOffRequest with
+        | Canceled of TimeOffRequest
+        | Denied of TimeOffRequest 
+        with
         member this.Request =
             match this with
             | NotCreated -> invalidOp "Not created"
@@ -47,6 +57,7 @@ module Logic =
             | Validated request -> request
             | Canceled request -> request
             | CanceledAsked request -> request
+            | Denied request -> request
         member this.IsActive =
             match this with
             | NotCreated -> false
@@ -54,6 +65,7 @@ module Logic =
             | CanceledAsked _
             | Validated _ -> true
             | Canceled _ -> false
+            | Denied _ -> false
 
     type UserRequestsState = Map<Guid, RequestState>
 
@@ -61,8 +73,10 @@ module Logic =
         match event with
         | RequestCreated request -> PendingValidation request
         | RequestValidated request -> Validated request
-        | RequestDenied request -> Canceled request
         | CancelWanted request -> CanceledAsked request
+        | RequestDenied request -> Denied request
+        | RequestCanceledByUser request -> Canceled request
+        | RequestCanceledByManager request -> Canceled request
 
     let evolveUserRequests (userRequests: UserRequestsState) (event: RequestEvent) =
         let requestState = defaultArg (Map.tryFind event.Request.RequestId userRequests) NotCreated
@@ -96,7 +110,27 @@ module Logic =
         | PendingValidation request ->
             Ok [RequestDenied request]
         | _ ->
-            Error "Request cannot be canceled"
+            Error "Request cannot be denied"
+
+    let cancelRequest requestState =
+        match requestState with
+        | PendingValidation request ->
+            Ok [RequestCanceledByUser request]
+        | Validated request ->
+            Ok [RequestCanceledByUser request]        
+        | _ ->
+            Error "Request cannot be canceled" 
+
+    let cancelRequestByManager requestState =
+        match requestState with
+        | PendingValidation request ->
+            Ok [RequestCanceledByManager request]
+        | Validated request ->
+            Ok [RequestCanceledByManager request]
+        | Denied request ->
+            Ok [RequestCanceledByManager request]        
+        | _ ->
+            Error "Request cannot be canceled"            
 
     let wantCancel requestState =
         match requestState with
@@ -107,7 +141,7 @@ module Logic =
             else
                 Ok [CancelWanted request]
         | _ -> 
-            Error "Not yet implemented" // TODO
+            Error "Not yet implemented" // TODO: 
 
 
     let decide (userRequests: UserRequestsState) (user: User) (command: Command) =
@@ -137,10 +171,27 @@ module Logic =
             | DenyRequest (_, requestId) ->
                 let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                 denyRequest requestState
+            | CancelRequestByEmployee (_, request) ->
+                if user = Manager then
+                    Error "Unauthorized"
+                else 
+                    if request.End.Date < DateTime.Now then
+                        Error "Error: Cannot cancel a request in past"
+                    else if request.Start.Date.Day = DateTime.Now.Day then
+                        Error "Error: Cannot cancel request where the start date is equal to today"                    
+                    else 
+                        let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
+                        cancelRequest requestState   
+            | CancelRequestByManager (_, request) ->
+                if request.End.Date < DateTime.Now then
+                    Error "Error: Cannot cancel a request in past"
+                else 
+                    let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
+                    cancelRequestByManager requestState
             | WantCancelRequest (_, requestId) ->
                 if user <> Manager then
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                     wantCancel requestState
                 else
                     Error "Not yet implemented"
-                    // TODO: Annulée par manager
+                    // TODO: Annulée par manager ?                                 

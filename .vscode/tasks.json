@@ -31,6 +31,22 @@
                 "kind": "test",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Run tests (watch)",
+            "type": "shell",
+            "command": "dotnet watch run",
+            "windows": {
+                "command": "dotnet run watch",
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/src/test/Logic.Tests"
+            },
+            "problemMatcher":"$msCompile",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         }
     ]
 }
