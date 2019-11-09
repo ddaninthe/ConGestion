@@ -127,3 +127,48 @@ let validationTests =
       |> Then (Error "Unauthorized : Employee should be the same") "Unauthorized : Employee should be the same"
     }
   ]
+
+[<Tests>]
+let cancelAskedTests = // Tests demande d'annulation
+  testList "Cancel Asked tests" [
+    test "Cancel a created request" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs (Employee "jdoe")
+      |> When (WantCancelRequest (request.UserId, request.RequestId))
+      |> Then (Ok [CancelWanted request]) "The cancelation should have been asked"
+    }
+
+    (*//TODO
+    test "Cancel a validated request" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
+
+      Given [ RequestCreated request ] // TODO: Change
+      |> ConnectedAs (Employee "jdoe")
+      |> When (WantCancelRequest (request.UserId, request.RequestId))
+      |> Then (Ok [CancelWanted request]) "The cancelation should have been asked"
+    }*)
+
+    test "A Request in the past cannot be canceled" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2010, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2010, 12, 27); HalfDay = PM }
+      }
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs (Employee "jdoe")
+      |> When (WantCancelRequest (request.UserId, request.RequestId))
+      |> Then (Error "It's too late to cancel this request") "The request should not have been canceled"
+    }
+  ]
