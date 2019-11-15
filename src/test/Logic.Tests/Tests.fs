@@ -128,9 +128,9 @@ let validationTests =
     }
   ]
 [<Tests>]
-let cancellationByEmployeeTests = 
-  testList "Cancellation by employee tests" [
-    test "A request starting in the future is cancelled by an employee" {
+let cancelationByEmployeeTests = 
+  testList "Cancelation by employee tests" [
+    test "A request starting in the future is canceled by an employee" {
       let request = {
         UserId = "jdoe"
         RequestId = Guid.NewGuid()
@@ -155,7 +155,7 @@ let cancellationByEmployeeTests =
         Given [ RequestCreated request ]
         |> ConnectedAs Manager
         |> When (CancelRequestByEmployee ("jdoe", request))
-        |> Then (Error "Unauthorized") "Error should have been thrown"
+        |> Then (Error "Cannot cancel as Employee when the user is a Manager") "Error should have been thrown"
     }
     test "I try to cancel a request in past" {
       let request = {
@@ -168,7 +168,7 @@ let cancellationByEmployeeTests =
         Given [ RequestCreated request ]
         |> ConnectedAs (Employee "jdoe")
         |> When (CancelRequestByEmployee ("jdoe", request))
-        |> Then (Error "Error: Cannot cancel a request in past") "Error should have been thrown"
+        |> Then (Error "Cannot cancel a request in past") "Error should have been thrown"
     }  
 
     test "I try to cancel a validated request" {
@@ -196,13 +196,13 @@ let cancellationByEmployeeTests =
         Given [ RequestValidated request ]
         |> ConnectedAs (Employee "jdoe")
         |> When (CancelRequestByEmployee ("jdoe", request))
-        |> Then (Error "Error: Cannot cancel request where the start date is equal to today") "Error should have been thrown"
+        |> Then (Error "Cannot cancel request where the start date is equal to today") "Error should have been thrown"
     }  
   ]
 
 [<Tests>]
-let cancellationByManagerTests = 
-  testList "Cancellation by manager tests" [
+let cancelationByManagerTests = 
+  testList "Cancelation by manager tests" [
     test "A validated request is canceled by a manager" {
       let request = {
         UserId = "jdoe"
@@ -246,7 +246,6 @@ let cancelAskedTests = // Tests demande d'annulation
       |> Then (Ok [CancelWanted request]) "The cancelation should have been asked"
     }
 
-    (*//TODO
     test "Cancel a validated request" {
       let request = {
         UserId = "jdoe"
@@ -254,11 +253,11 @@ let cancelAskedTests = // Tests demande d'annulation
         Start = { Date = DateTime(2019, 12, 27); HalfDay = AM }
         End = { Date = DateTime(2019, 12, 27); HalfDay = PM } }
 
-      Given [ RequestCreated request ] // TODO: Change
+      Given [ RequestValidated request ]
       |> ConnectedAs (Employee "jdoe")
       |> When (WantCancelRequest (request.UserId, request.RequestId))
       |> Then (Ok [CancelWanted request]) "The cancelation should have been asked"
-    }*)
+    }
 
     test "A Request in the past cannot be canceled" {
       let request = {
@@ -272,5 +271,37 @@ let cancelAskedTests = // Tests demande d'annulation
       |> ConnectedAs (Employee "jdoe")
       |> When (WantCancelRequest (request.UserId, request.RequestId))
       |> Then (Error "It's too late to cancel this request") "The request should not have been canceled"
+    }
+  ]
+
+[<Tests>]
+let denyCancelTests =
+  testList "Deny Cancel Request tests" [
+    test "A cancel request can be denied" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2020, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2020, 12, 27); HalfDay = PM }
+      }
+
+      Given [ CancelWanted request ]
+      |> ConnectedAs (Manager)
+      |> When (DenyCancelRequest (request.UserId, request.RequestId))
+      |> Then (Ok [CancelRequestDenied request]) "The cancel request should have been denied"
+    }
+
+    test "A created request cannot be cancel denied" {
+      let request = {
+        UserId = "jdoe"
+        RequestId = Guid.NewGuid()
+        Start = { Date = DateTime(2020, 12, 27); HalfDay = AM }
+        End = { Date = DateTime(2020, 12, 27); HalfDay = PM }
+      }
+
+      Given [ RequestCreated request ]
+      |> ConnectedAs (Manager)
+      |> When (DenyCancelRequest (request.UserId, request.RequestId))
+      |> Then (Error "Cannot denied this request") "The cancel request should not have been denied"
     }
   ]

@@ -10,6 +10,7 @@ type Command =
     | WantCancelRequest of UserId * Guid  // Demande d'annulation
     | CancelRequestByEmployee of UserId * TimeOffRequest // Requête utilisé pour qu'un employé annule sa requête
     | CancelRequestByManager of UserId * TimeOffRequest // Requête utilisé pour qu'un manager annule une requête
+    | DenyCancelRequest of UserId * Guid // Refus de l'annulation
     with
     member this.UserId =
         match this with
@@ -19,6 +20,7 @@ type Command =
         | WantCancelRequest (userId, _) -> userId
         | CancelRequestByEmployee (_, request) -> request.UserId
         | CancelRequestByManager (_, request) -> request.UserId
+        | DenyCancelRequest (userId, _) -> userId
 
 // And our events
 type RequestEvent =
@@ -28,6 +30,7 @@ type RequestEvent =
     | CancelWanted of TimeOffRequest
     | RequestCanceledByUser of TimeOffRequest
     | RequestCanceledByManager of TimeOffRequest
+    | CancelRequestDenied of TimeOffRequest
     with
     member this.Request =
         match this with
@@ -37,6 +40,7 @@ type RequestEvent =
         | CancelWanted request -> request
         | RequestCanceledByUser request -> request
         | RequestCanceledByManager request -> request
+        | CancelRequestDenied request -> request
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -49,6 +53,7 @@ module Logic =
         | CanceledAsked of TimeOffRequest // Demande d'annulation
         | Canceled of TimeOffRequest
         | Denied of TimeOffRequest 
+        | CancelDenied of TimeOffRequest // Refus d'annulation
         with
         member this.Request =
             match this with
@@ -58,6 +63,7 @@ module Logic =
             | Canceled request -> request
             | CanceledAsked request -> request
             | Denied request -> request
+            | CancelDenied request -> request
         member this.IsActive =
             match this with
             | NotCreated -> false
@@ -66,6 +72,7 @@ module Logic =
             | Validated _ -> true
             | Canceled _ -> false
             | Denied _ -> false
+            | CancelDenied _ -> true
 
     type UserRequestsState = Map<Guid, RequestState>
 
@@ -77,6 +84,7 @@ module Logic =
         | RequestDenied request -> Denied request
         | RequestCanceledByUser request -> Canceled request
         | RequestCanceledByManager request -> Canceled request
+        | CancelRequestDenied request -> CancelDenied request
 
     let evolveUserRequests (userRequests: UserRequestsState) (event: RequestEvent) =
         let requestState = defaultArg (Map.tryFind event.Request.RequestId userRequests) NotCreated
@@ -127,22 +135,30 @@ module Logic =
             Ok [RequestCanceledByManager request]
         | Validated request ->
             Ok [RequestCanceledByManager request]
+        | CanceledAsked request
+        | CancelDenied request
         | Denied request ->
-            Ok [RequestCanceledByManager request]        
+            Ok [RequestCanceledByManager request]
         | _ ->
             Error "Request cannot be canceled"            
 
     let wantCancel requestState =
         match requestState with
-        //| ValidatedByManager // TODO
+        | Validated request
         | PendingValidation request ->
             if request.Start <= Boundary.Now then
                 Error "It's too late to cancel this request"
             else
                 Ok [CancelWanted request]
         | _ -> 
-            Error "Not yet implemented" // TODO: 
+            Error "Cannot ask cancel of this request"
 
+    let denyCancel requestState =
+        match requestState with
+        | CanceledAsked request ->
+            Ok [CancelRequestDenied request]
+        | _ ->
+            Error "Cannot denied this request"
 
     let decide (userRequests: UserRequestsState) (user: User) (command: Command) =
         let relatedUserId = command.UserId
@@ -171,27 +187,34 @@ module Logic =
             | DenyRequest (_, requestId) ->
                 let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                 denyRequest requestState
+
             | CancelRequestByEmployee (_, request) ->
                 if user = Manager then
-                    Error "Unauthorized"
+                    Error "Cannot cancel as Employee when the user is a Manager"
                 else 
-                    if request.End.Date < DateTime.Now then
-                        Error "Error: Cannot cancel a request in past"
+                    if request.End < Boundary.Now then
+                        Error "Cannot cancel a request in past"
                     else if request.Start.Date.Day = DateTime.Now.Day then
-                        Error "Error: Cannot cancel request where the start date is equal to today"                    
+                        Error "Cannot cancel request where the start date is equal to today"                    
                     else 
                         let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
-                        cancelRequest requestState   
+                        cancelRequest requestState
+
             | CancelRequestByManager (_, request) ->
                 if request.End.Date < DateTime.Now then
-                    Error "Error: Cannot cancel a request in past"
+                    Error "Cannot cancel a request in past"
                 else 
                     let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
                     cancelRequestByManager requestState
+
             | WantCancelRequest (_, requestId) ->
+                let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
+                wantCancel requestState
+
+            | DenyCancelRequest (_, requestId) ->
                 if user <> Manager then
+                    Error "Unauthorized"
+                else 
                     let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
-                    wantCancel requestState
-                else
-                    Error "Not yet implemented"
-                    // TODO: Annulée par manager ?                                 
+                    denyCancel requestState
+
