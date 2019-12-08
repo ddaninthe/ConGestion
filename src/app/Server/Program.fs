@@ -130,7 +130,7 @@ let main _ =
     let contentRoot = Directory.GetCurrentDirectory()
 
     //let eventStore = InMemoryStore.Create<UserId, RequestEvent>()
-    let storagePath = System.IO.Path.Combine(contentRoot, "../../../.storage", "userRequests")
+    let storagePath = System.IO.Path.Combine(contentRoot, "./.storage", "userRequests")
     let eventStore = FileSystemStore.Create<UserId, RequestEvent>(storagePath, sprintf "%s")
 
     let webRoot = Path.Combine(contentRoot, "WebRoot")
