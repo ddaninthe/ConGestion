@@ -140,7 +140,7 @@ let cancelationByEmployeeTests =
 
       Given [ RequestCreated request ]
       |> ConnectedAs (Employee "jdoe")
-      |> When (CancelRequestByEmployee ("jdoe", request))
+      |> When (CancelRequestByEmployee request)
       |> Then (Ok [RequestCanceledByUser request]) "The request should have been canceled"
     }
 
@@ -154,7 +154,7 @@ let cancelationByEmployeeTests =
 
         Given [ RequestCreated request ]
         |> ConnectedAs Manager
-        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> When (CancelRequestByEmployee request)
         |> Then (Error "Cannot cancel as Employee when the user is a Manager") "Error should have been thrown"
     }
     test "I try to cancel a request in past" {
@@ -167,7 +167,7 @@ let cancelationByEmployeeTests =
 
         Given [ RequestCreated request ]
         |> ConnectedAs (Employee "jdoe")
-        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> When (CancelRequestByEmployee request)
         |> Then (Error "Cannot cancel a request in past") "Error should have been thrown"
     }  
 
@@ -181,7 +181,7 @@ let cancelationByEmployeeTests =
 
         Given [ RequestValidated request ]
         |> ConnectedAs (Employee "jdoe")
-        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> When (CancelRequestByEmployee request)
         |> Then (Ok [RequestCanceledByUser request]) "The request should have been canceled"
     }
 
@@ -195,7 +195,7 @@ let cancelationByEmployeeTests =
 
         Given [ RequestValidated request ]
         |> ConnectedAs (Employee "jdoe")
-        |> When (CancelRequestByEmployee ("jdoe", request))
+        |> When (CancelRequestByEmployee request)
         |> Then (Error "Cannot cancel request where the start date is equal to today") "Error should have been thrown"
     }  
   ]
@@ -212,7 +212,7 @@ let cancelationByManagerTests =
 
       Given [ RequestValidated request ]
       |> ConnectedAs Manager
-      |> When (CancelRequestByManager ("jdoe", request))
+      |> When (CancelRequestByManager request)
       |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
     }
 
@@ -225,7 +225,7 @@ let cancelationByManagerTests =
 
       Given [ RequestDenied request ]
       |> ConnectedAs Manager
-      |> When (CancelRequestByManager ("jdoe", request))
+      |> When (CancelRequestByManager request)
       |> Then (Ok [RequestCanceledByManager request]) "The request should have been canceled"
     }
   ]
