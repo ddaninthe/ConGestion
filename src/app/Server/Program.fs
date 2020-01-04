@@ -43,11 +43,76 @@ module HttpHandlers =
     let validateRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
-                let command = ValidateRequest (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let userAndRequestId = ctx.BindJsonAsync<UserAndRequestId>()
+                let command = ValidateRequest (userAndRequestId.Result.UserId, userAndRequestId.Result.RequestId)
                 let result = handleCommand command
                 match result with
                 | Ok [RequestValidated timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let denyRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindJsonAsync<UserAndRequestId>()
+                let command = DenyRequest (userAndRequestId.Result.UserId, userAndRequestId.Result.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [RequestDenied timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let wantCancelRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindJsonAsync<UserAndRequestId>()
+                let command = WantCancelRequest (userAndRequestId.Result.UserId, userAndRequestId.Result.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [CancelWanted timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let cancelRequestByEmployee (handleCommand: Command -> Result<RequestEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndTimeOffRequest = ctx.BindJsonAsync<UserIdAndTimeOffRequest>()
+                let command = CancelRequestByEmployee (userAndTimeOffRequest.Result.UserId, userAndTimeOffRequest.Result.TimeOffRequest)
+                let result = handleCommand command
+                match result with
+                | Ok [RequestCanceledByUser timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let cancelRequestByManager (handleCommand: Command -> Result<RequestEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndTimeOffRequest = ctx.BindJsonAsync<UserIdAndTimeOffRequest>()
+                let command = CancelRequestByManager (userAndTimeOffRequest.Result.UserId, userAndTimeOffRequest.Result.TimeOffRequest)
+                let result = handleCommand command
+                match result with
+                | Ok [RequestCanceledByUser timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let denyCancelRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindJsonAsync<UserAndRequestId>()
+                let command = DenyCancelRequest (userAndRequestId.Result.UserId, userAndRequestId.Result.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [CancelRequestDenied timeOffRequest] -> return! json timeOffRequest next ctx
                 | Ok _ -> return! Successful.NO_CONTENT next ctx
                 | Error message ->
                     return! (BAD_REQUEST message) next ctx
@@ -84,6 +149,11 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
                         choose [
                             POST >=> route "/request" >=> HttpHandlers.requestTimeOff (handleCommand user)
                             POST >=> route "/validate-request" >=> HttpHandlers.validateRequest (handleCommand user)
+                            POST >=> route "/deny-request" >=> HttpHandlers.denyRequest(handleCommand user)
+                            POST >=> route "/want-cancel-request" >=> HttpHandlers.wantCancelRequest(handleCommand user)
+                            POST >=> route "/cancel-request-by-employee" >=> HttpHandlers.cancelRequestByEmployee(handleCommand user)
+                            POST >=> route "/cancel-request-by-manager" >=> HttpHandlers.cancelRequestByManager(handleCommand user)
+                            POST >=> route "/deny-cancel-request" >=> HttpHandlers.denyCancelRequest(handleCommand user)
                         ]
                     ))
             ])
