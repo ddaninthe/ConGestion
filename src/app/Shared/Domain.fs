@@ -41,3 +41,13 @@ type TimeOffRequest = {
     Start: Boundary
     End: Boundary
 }
+
+[<CLIMutable>]
+type TimeOffDetails = {
+    UserId: UserId
+    AttribueTimeOff: string
+    LastYearTimeOff: string
+    TakenToDateTimeOff: string
+    PlannedTimeOff: string
+    CurrentBalance: string
+}

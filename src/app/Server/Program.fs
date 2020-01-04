@@ -28,6 +28,7 @@ module HttpHandlers =
         RequestId: Guid
     }
 
+
     let requestTimeOff (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
@@ -118,6 +119,19 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
+    let currentBalance (handleCurrentBalance: UserId -> _) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let! userId = ctx.BindJsonAsync<UserId>()
+                printfn "UserId : %s" userId
+                let result = handleCurrentBalance userId
+                return! json result next ctx
+                // match result with
+                // | Ok res -> return! json res next ctx
+                // | Error message ->
+                //     return! (BAD_REQUEST message) next ctx
+            }
+
 // ---------------------------------
 // Web app
 // ---------------------------------
@@ -139,7 +153,13 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
 
         // Finally, return the result
         result
-        
+
+    let handleCurrentBalance(userId: UserId) =
+        let eventStream = eventStore.GetStream(userId)
+        let items = eventStream.ReadAll()
+        printfn "TEST %s" (items.ToString())
+        eventStream.ReadAll()
+
     choose [
         subRoute "/api"
             (choose [
@@ -154,6 +174,7 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
                             POST >=> route "/cancel-request-by-employee" >=> HttpHandlers.cancelRequestByEmployee(handleCommand user)
                             POST >=> route "/cancel-request-by-manager" >=> HttpHandlers.cancelRequestByManager(handleCommand user)
                             POST >=> route "/deny-cancel-request" >=> HttpHandlers.denyCancelRequest(handleCommand user)
+                            GET >=> route "/current-balance" >=> HttpHandlers.currentBalance(handleCurrentBalance)
                         ]
                     ))
             ])
