@@ -8,8 +8,8 @@ type Command =
     | ValidateRequest of UserId * Guid
     | DenyRequest of UserId * Guid
     | WantCancelRequest of UserId * Guid  // Demande d'annulation
-    | CancelRequestByEmployee of UserId * TimeOffRequest // Requête utilisé pour qu'un employé annule sa requête
-    | CancelRequestByManager of UserId * TimeOffRequest // Requête utilisé pour qu'un manager annule une requête
+    | CancelRequestByEmployee of TimeOffRequest // Requête utilisé pour qu'un employé annule sa requête
+    | CancelRequestByManager of TimeOffRequest // Requête utilisé pour qu'un manager annule une requête
     | DenyCancelRequest of UserId * Guid // Refus de l'annulation
     with
     member this.UserId =
@@ -18,8 +18,8 @@ type Command =
         | ValidateRequest (userId, _) -> userId
         | DenyRequest (userId, _) -> userId
         | WantCancelRequest (userId, _) -> userId
-        | CancelRequestByEmployee (_, request) -> request.UserId
-        | CancelRequestByManager (_, request) -> request.UserId
+        | CancelRequestByEmployee request -> request.UserId
+        | CancelRequestByManager request -> request.UserId
         | DenyCancelRequest (userId, _) -> userId
 
 // And our events
@@ -188,7 +188,7 @@ module Logic =
                 let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
                 denyRequest requestState
 
-            | CancelRequestByEmployee (_, request) ->
+            | CancelRequestByEmployee request ->
                 if user = Manager then
                     Error "Cannot cancel as Employee when the user is a Manager"
                 else 
@@ -200,7 +200,7 @@ module Logic =
                         let requestState = defaultArg (userRequests.TryFind request.RequestId) NotCreated
                         cancelRequest requestState
 
-            | CancelRequestByManager (_, request) ->
+            | CancelRequestByManager request ->
                 if request.End.Date < DateTime.Now then
                     Error "Cannot cancel a request in past"
                 else 
