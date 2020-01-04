@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "a3cca97c-8298-40d1-b4ec-f88e1b8467ec",
+		"_postman_id": "6d2407ba-f3bf-4aaa-97a0-6ec00f75b02a",
 		"name": "TimeOff",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -32,7 +32,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"UserName\":\"manager\",\"Password\":\"manager\"}"
+					"raw": "{\n\t\"UserName\":\"employee2\",\n\t\"Password\":\"employee2\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/api/users/login",
@@ -59,7 +59,7 @@
 					"bearer": [
 						{
 							"key": "token",
-							"value": "{{Employee1Token}}",
+							"value": "{{employee2}}",
 							"type": "string"
 						}
 					]
@@ -73,7 +73,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"userId\": \"employee1\",\n    \"requestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0539\",\n    \"start\": {\n        \"date\": \"2020-01-01T00:00:00\",\n        \"HalfDay\": {\n            \"case\": \"AM\"\n        }\n    },\n    \"End\": {\n        \"date\": \"2020-01-01T00:00:00\",\n        \"HalfDay\": {\n            \"Case\": \"PM\"\n        }\n    }\n}"
+					"raw": "{\n    \"userId\": \"employee2\",\n    \"requestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0541\",\n    \"start\": {\n        \"date\": \"2020-03-23T00:00:00\",\n        \"HalfDay\": {\n            \"case\": \"AM\"\n        }\n    },\n    \"End\": {\n        \"date\": \"2020-03-24T00:00:00\",\n        \"HalfDay\": {\n            \"Case\": \"PM\"\n        }\n    }\n}"
 				},
 				"url": {
 					"raw": "http://localhost:5000/api/timeoff/request",
@@ -99,19 +99,31 @@
 					"bearer": [
 						{
 							"key": "token",
-							"value": "{{ManagerToken}}",
+							"value": "{{manager}}",
 							"type": "string"
 						}
 					]
 				},
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
-					"raw": ""
+					"raw": "{\n\t\"UserId\": \"employee2\",\n\t\"RequestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0541\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
 				},
 				"url": {
-					"raw": "http://localhost:5000/api/timeoff/validate-request?UserId=employee1&RequestId=f1511bdc-5008-4d99-899f-cfef79cd0540",
+					"raw": "http://localhost:5000/api/timeoff/validate-request",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -121,20 +133,240 @@
 						"api",
 						"timeoff",
 						"validate-request"
-					],
-					"query": [
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Deny Request",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
 						{
-							"key": "UserId",
-							"value": "employee1"
-						},
-						{
-							"key": "RequestId",
-							"value": "f1511bdc-5008-4d99-899f-cfef79cd0539"
+							"key": "token",
+							"value": "{{manager}}",
+							"type": "string"
 						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"UserId\": \"employee2\",\n\t\"RequestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0540\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/timeoff/deny-request",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"timeoff",
+						"deny-request"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "WantCancelRequest",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{manager}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"UserId\": \"employee2\",\n\t\"RequestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0541\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/timeoff/want-cancel-request",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"timeoff",
+						"want-cancel-request"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CancelRequestByEmployee",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{employee2}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"userId\": \"employee2\",\n\t\"requestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0538\",\n    \"start\": {\n        \"date\": \"2020-03-10T00:00:00\",\n        \"HalfDay\": {\n            \"case\": \"AM\"\n        }\n    },\n    \"End\": {\n        \"date\": \"2020-03-12T00:00:00\",\n        \"HalfDay\": {\n            \"Case\": \"PM\"\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/timeoff/cancel-request-by-employee",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"timeoff",
+						"cancel-request-by-employee"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CancelRequestByManager",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{manager}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"userId\": \"employee2\",\n    \"requestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0540\",\n    \"start\": {\n        \"date\": \"2020-03-22T00:00:00\",\n        \"halfDay\": {\n            \"case\": \"AM\"\n        }\n    },\n    \"end\": {\n        \"date\": \"2020-03-21T00:00:00\",\n        \"halfDay\": {\n            \"case\": \"PM\"\n        }\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/timeoff/cancel-request-by-manager",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"timeoff",
+						"cancel-request-by-manager"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DenyCancelRequest",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{manager}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"UserId\": \"employee2\",\n\t\"RequestId\": \"f1511bdc-5008-4d99-899f-cfef79cd0541\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/timeoff/deny-cancel-request",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"timeoff",
+						"deny-cancel-request"
 					]
 				}
 			},
 			"response": []
 		}
-	]
+	],
+	"protocolProfileBehavior": {}
 }
