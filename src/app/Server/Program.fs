@@ -82,8 +82,8 @@ module HttpHandlers =
     let cancelRequestByEmployee (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let userAndTimeOffRequest = ctx.BindJsonAsync<UserIdAndTimeOffRequest>()
-                let command = CancelRequestByEmployee (userAndTimeOffRequest.Result.UserId, userAndTimeOffRequest.Result.TimeOffRequest)
+                let! timeOffRequest = ctx.BindJsonAsync<TimeOffRequest>()
+                let command = CancelRequestByEmployee timeOffRequest
                 let result = handleCommand command
                 match result with
                 | Ok [RequestCanceledByUser timeOffRequest] -> return! json timeOffRequest next ctx
@@ -95,11 +95,11 @@ module HttpHandlers =
     let cancelRequestByManager (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let userAndTimeOffRequest = ctx.BindJsonAsync<UserIdAndTimeOffRequest>()
-                let command = CancelRequestByManager (userAndTimeOffRequest.Result.UserId, userAndTimeOffRequest.Result.TimeOffRequest)
+                let! timeOffRequest = ctx.BindJsonAsync<TimeOffRequest>()
+                let command = CancelRequestByManager timeOffRequest
                 let result = handleCommand command
                 match result with
-                | Ok [RequestCanceledByUser timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok [RequestCanceledByManager timeOffRequest] -> return! json timeOffRequest next ctx
                 | Ok _ -> return! Successful.NO_CONTENT next ctx
                 | Error message ->
                     return! (BAD_REQUEST message) next ctx
