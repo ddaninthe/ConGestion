@@ -19,6 +19,7 @@ type Boundary = {
 with 
     static member Now = 
         {
+            // Date = DateTime.Today.AddYears(-1)
             Date = DateTime.Today
             HalfDay = if DateTime.Now.Hour <= 12 then AM else PM
         }

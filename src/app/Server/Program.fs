@@ -126,7 +126,29 @@ module HttpHandlers =
 
                 // Completer les 5 fonctions ci dessous
                 let cumulTimeOff = 20.0
-                let lastYearTimeOff = 0.0
+                let lastYearTimeOff =
+                    Seq.choose(fun x ->
+                                    match x with
+                                    | RequestValidated req -> Some(req)
+                                    | _ -> None) result
+                    |> Seq.filter(fun x -> 
+                        let firstJanuaryLastYear = {
+                            Date = new DateTime(Boundary.Now.Date.AddYears(-1).Year, 01, 01)
+                            HalfDay = AM
+                        }
+                        let lastDayLastYear = {
+                            Date = new DateTime(Boundary.Now.Date.AddYears(-1).Year, 12, 31)
+                            HalfDay = PM
+                        }
+                        let afterBeginingLastYear = Boundary.Compare x.Start firstJanuaryLastYear
+                        let beforeEndLastYear = Boundary.Compare x.Start lastDayLastYear
+
+                        afterBeginingLastYear > 0 && beforeEndLastYear < 0
+                    )
+                    |> Seq.map(fun x -> Boundary.Days x.Start x.End)
+                    |> Seq.sum
+                    |> fun x -> cumulTimeOff - x
+
                 let takenTimeOff = 
                     Seq.choose(fun x ->
                                     match x with
