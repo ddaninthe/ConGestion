@@ -33,6 +33,9 @@ with
             else
                 0
         | _ -> value
+    static member Days (boundary: Boundary) (boundary2: Boundary) =
+        (boundary.Date - boundary2.Date).TotalDays
+        |> abs
 
 [<CLIMutable>]
 type TimeOffRequest = {
@@ -45,9 +48,9 @@ type TimeOffRequest = {
 [<CLIMutable>]
 type TimeOffDetails = {
     UserId: UserId
-    AttribueTimeOff: int
-    LastYearTimeOff: int
-    TakenToDateTimeOff: int
-    PlannedTimeOff: int
-    CurrentBalance: int
+    AttribueTimeOff: float
+    LastYearTimeOff: float
+    TakenToDateTimeOff: float
+    PlannedTimeOff: float
+    CurrentBalance: float
 }

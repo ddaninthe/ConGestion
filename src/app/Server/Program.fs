@@ -122,15 +122,31 @@ module HttpHandlers =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let! userId = ctx.BindJsonAsync<UserId>()
-                printfn "UserId : %s" userId
                 let result = handleCurrentBalance userId
-                
+
                 // Completer les 5 fonctions ci dessous
-                let cumulTimeOff = 20
-                let lastYearTimeOff = 0
-                let takenTimeOff = 0
-                let plannedTimeOff = 0
-                let currentBalance = 0
+                let cumulTimeOff = 20.0
+                let lastYearTimeOff = 0.0
+                let takenTimeOff = 
+                    Seq.choose(fun x ->
+                                    match x with
+                                    | RequestValidated req -> Some(req)
+                                    | _ -> None) result
+                    |> Seq.filter(fun x -> 
+                        let firstJanuaryCurrentYear = {
+                            Date = new DateTime(Boundary.Now.Date.Year, 01, 01)
+                            HalfDay = AM
+                        }
+                        let afterBeginingYear = Boundary.Compare x.Start firstJanuaryCurrentYear
+                        let beforeToday = Boundary.Compare x.Start Boundary.Now
+
+                        afterBeginingYear > 0 && beforeToday < 0
+                    )
+                    |> Seq.map(fun x -> Boundary.Days x.Start x.End)
+                    |> Seq.sum
+
+                let plannedTimeOff = 0.0
+                let currentBalance = 0.0
 
                 let finalResult = {
                     UserId = userId
@@ -142,10 +158,6 @@ module HttpHandlers =
                 }
 
                 return! json finalResult next ctx
-                // match result with
-                // | Ok res -> return! json res next ctx
-                // | Error message ->
-                //     return! (BAD_REQUEST message) next ctx
             }
 
 // ---------------------------------
@@ -173,7 +185,6 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
     let handleCurrentBalance(userId: UserId): seq<RequestEvent> =
         let eventStream = eventStore.GetStream(userId)
         let items = eventStream.ReadAll()
-        printfn "TEST %s" (items.ToString())
         eventStream.ReadAll()
 
     choose [
