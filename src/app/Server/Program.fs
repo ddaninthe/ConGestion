@@ -185,7 +185,7 @@ module HttpHandlers =
                     |> Seq.map(fun x -> Boundary.Days x.Start x.End)
                     |> Seq.sum
                     
-                let currentBalance = 0.0
+                let currentBalance = cumulTimeOff + lastYearTimeOff - (takenTimeOff + plannedTimeOff)
 
                 let finalResult = {
                     UserId = userId
