@@ -103,6 +103,8 @@ module Logic =
             Error "Overlapping request"
         elif request.Start <= boundary then
             Error "The request starts in the past"
+        elif not (Boundary.Compare request.Start request.End <= 0) then
+            Error "The request end must be after or equal the request starts"
         else
             Ok [RequestCreated request]
 
