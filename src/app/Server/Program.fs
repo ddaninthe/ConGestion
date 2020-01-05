@@ -28,7 +28,6 @@ module HttpHandlers =
         RequestId: Guid
     }
 
-
     let requestTimeOff (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
@@ -119,13 +118,30 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
-    let currentBalance (handleCurrentBalance: UserId -> _) =
+    let currentBalance (handleCurrentBalance: UserId -> seq<RequestEvent>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let! userId = ctx.BindJsonAsync<UserId>()
                 printfn "UserId : %s" userId
                 let result = handleCurrentBalance userId
-                return! json result next ctx
+                
+                // Completer les 5 fonctions ci dessous
+                let cumulTimeOff = 20
+                let lastYearTimeOff = 0
+                let takenTimeOff = 0
+                let plannedTimeOff = 0
+                let currentBalance = 0
+
+                let finalResult = {
+                    UserId = userId
+                    AttribueTimeOff = cumulTimeOff
+                    LastYearTimeOff = lastYearTimeOff
+                    TakenToDateTimeOff = takenTimeOff
+                    PlannedTimeOff = plannedTimeOff
+                    CurrentBalance = currentBalance
+                }
+
+                return! json finalResult next ctx
                 // match result with
                 // | Ok res -> return! json res next ctx
                 // | Error message ->
@@ -154,7 +170,7 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
         // Finally, return the result
         result
 
-    let handleCurrentBalance(userId: UserId) =
+    let handleCurrentBalance(userId: UserId): seq<RequestEvent> =
         let eventStream = eventStore.GetStream(userId)
         let items = eventStream.ReadAll()
         printfn "TEST %s" (items.ToString())
