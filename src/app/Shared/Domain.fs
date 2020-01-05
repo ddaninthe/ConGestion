@@ -34,7 +34,7 @@ with
                 0
         | _ -> value
     static member Days (boundary: Boundary) (boundary2: Boundary) =
-        (boundary.Date - boundary2.Date).TotalDays
+        (boundary.Date - boundary2.Date).TotalDays //TODO: Prends pas encore en compte le HalfDay
         |> abs
 
 [<CLIMutable>]

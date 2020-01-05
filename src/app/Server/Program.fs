@@ -145,7 +145,24 @@ module HttpHandlers =
                     |> Seq.map(fun x -> Boundary.Days x.Start x.End)
                     |> Seq.sum
 
-                let plannedTimeOff = 0.0
+                let plannedTimeOff =
+                    Seq.choose(fun x ->
+                                    match x with
+                                    | RequestValidated req -> Some(req)
+                                    | _ -> None) result
+                    |> Seq.filter(fun x -> 
+                        let lastDayCurrentYear = {
+                            Date = new DateTime(Boundary.Now.Date.Year, 12, 31)
+                            HalfDay = PM
+                        }
+                        let beforeEndYear = Boundary.Compare x.Start lastDayCurrentYear
+                        let afterToday = Boundary.Compare x.Start (Boundary.Now)
+
+                        beforeEndYear < 0 && afterToday > 0
+                    )
+                    |> Seq.map(fun x -> Boundary.Days x.Start x.End)
+                    |> Seq.sum
+                    
                 let currentBalance = 0.0
 
                 let finalResult = {
