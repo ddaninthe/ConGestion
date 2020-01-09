@@ -118,11 +118,17 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
-    let currentBalance (handleCurrentBalance: UserId -> seq<RequestEvent>) =
+    let getEvents(getAllEvents: string -> seq<RequestEvent>, userId: string) = 
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let! userId = ctx.BindJsonAsync<UserId>()
-                let result = handleCurrentBalance userId
+                let result = getAllEvents userId
+
+                return! json result next ctx
+            }
+    let currentBalance (getAllEvents: string -> seq<RequestEvent>, userId: string) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let result = getAllEvents userId
 
                 // Completer les 5 fonctions ci dessous
                 let cumulTimeOff = 20.0
@@ -221,10 +227,10 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
         // Finally, return the result
         result
 
-    let handleCurrentBalance(userId: UserId): seq<RequestEvent> =
+    let getAllEvents(userId: string): seq<RequestEvent> =
         let eventStream = eventStore.GetStream(userId)
-        let items = eventStream.ReadAll()
         eventStream.ReadAll()
+
 
     choose [
         subRoute "/api"
@@ -240,7 +246,10 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
                             POST >=> route "/cancel-request-by-employee" >=> HttpHandlers.cancelRequestByEmployee(handleCommand user)
                             POST >=> route "/cancel-request-by-manager" >=> HttpHandlers.cancelRequestByManager(handleCommand user)
                             POST >=> route "/deny-cancel-request" >=> HttpHandlers.denyCancelRequest(handleCommand user)
-                            GET >=> route "/current-balance" >=> HttpHandlers.currentBalance(handleCurrentBalance)
+                            GET >=> choose [
+                                routef "/events/%s" (fun userId -> HttpHandlers.getEvents(getAllEvents, userId))
+                                routef "/current-balance/%s" (fun userId -> HttpHandlers.currentBalance(getAllEvents, userId))
+                            ]
                         ]
                     ))
             ])
@@ -287,7 +296,7 @@ let main _ =
     let contentRoot = Directory.GetCurrentDirectory()
 
     //let eventStore = InMemoryStore.Create<UserId, RequestEvent>()
-    let storagePath = System.IO.Path.Combine(contentRoot, "./.storage", "userRequests")
+    let storagePath = System.IO.Path.Combine(contentRoot, ".storage", "userRequests")
     let eventStore = FileSystemStore.Create<UserId, RequestEvent>(storagePath, sprintf "%s")
 
     let webRoot = Path.Combine(contentRoot, "WebRoot")
